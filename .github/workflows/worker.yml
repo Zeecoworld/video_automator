@@ -1,0 +1,54 @@
+name: worker
+
+# Downloads pasted links, finds highlights, cuts the clips and queues them for posting.
+# Started instantly by the Netlify page (workflow_dispatch) and also on a schedule as a safety net.
+# Optional alternative to Modal. Manual only: it needs the Actions secrets (SUPABASE_URL, ...) set in this repo.
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: clip-worker
+  cancel-in-progress: false
+
+jobs:
+  work:
+    runs-on: ubuntu-latest        # use [self-hosted] to run from a home PC/VPS with a residential IP (best for YouTube/Instagram)
+    timeout-minutes: 350
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_MODEL: ${{ secrets.HF_MODEL }}
+      LOCAL_WHISPER: "off"
+      YTDLP_COOKIES: ${{ secrets.YTDLP_COOKIES }}
+      FFMPEG_PATH: /usr/bin/ffmpeg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: denoland/setup-deno@v2     # yt-dlp uses a JS runtime to solve YouTube's player challenges
+        with:
+          deno-version: v2.x
+      - name: System packages and yt-dlp
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+          sudo curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+          yt-dlp --version
+      - name: Cookies (YouTube + Instagram, optional but usually needed)
+        run: |
+          if [ -n "$YTDLP_COOKIES" ]; then
+            printf '%s' "$YTDLP_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+            echo "YTDLP_COOKIES_FILE=$RUNNER_TEMP/cookies.txt" >> "$GITHUB_ENV"
+          fi
+      - run: npm install
+      - run: npm run worker

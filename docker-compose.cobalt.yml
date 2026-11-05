@@ -1,0 +1,12 @@
+# Self-hosted Cobalt (the download API). Run on any small VPS or home server, or use a Railway/Fly template.
+# IMPORTANT: read https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md and enable API-key auth,
+# otherwise anyone who finds your URL can use your bandwidth.
+services:
+  cobalt:
+    image: ghcr.io/imputnet/cobalt:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      API_URL: "https://cobalt.your-domain.com/"   # public URL of this instance, with trailing slash
+      FORCE_LOCAL_PROCESSING: "never"              # server does the remuxing, so you always get one ready file

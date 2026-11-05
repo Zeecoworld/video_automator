@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip Engine</title>
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --text:#14161a; --muted:#646b76; --line:#e3e6ea; --accent:#00a862; --accent-text:#fff; --bad:#c62828; --warn:#a15c00; --soft:#f0f2f5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0d0f12; --card:#16191e; --text:#eceef1; --muted:#98a0ab; --line:#262b33; --accent:#00ea90; --accent-text:#04210f; --bad:#ff6b6b; --warn:#ffb74d; --soft:#1d2127; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+  main { max-width:1000px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:22px; margin:0; } h2 { font-size:16px; margin:0; }
+  .top { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .sub { color:var(--muted); margin:2px 0 0; font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .head { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  textarea, input, select { background:transparent; color:inherit; border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; max-width:100%; }
+  textarea { width:100%; min-height:96px; resize:vertical; }
+  label { display:inline-flex; align-items:center; gap:6px; margin-right:14px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
+  button { background:var(--accent); color:var(--accent-text); border:0; border-radius:8px; padding:9px 16px; font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); font-weight:500; padding:6px 12px; font-size:13.5px; }
+  button.danger { color:var(--bad); }
+  .msg { margin-top:10px; min-height:1.4em; } .ok { color:var(--accent); } .bad { color:var(--bad); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .tile .n { font-size:22px; font-weight:700; } .tile .l { color:var(--muted); font-size:13px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tab { background:transparent; color:var(--muted); border:1px solid var(--line); padding:5px 12px; font-size:13.5px; font-weight:500; }
+  .tab.on { background:var(--soft); color:var(--text); border-color:var(--muted); }
+  .day { margin:16px 0 6px; color:var(--muted); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  .item { display:grid; grid-template-columns:110px 1fr; gap:12px; padding:12px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:var(--card); }
+  .when { font-size:13px; } .when b { display:block; font-size:16px; } .cd { color:var(--accent); font-weight:600; }
+  .title { font-weight:600; word-break:break-word; } .meta { color:var(--muted); font-size:13px; margin-top:2px; }
+  .pill { display:inline-block; padding:1px 9px; border-radius:99px; font-size:12px; border:1px solid var(--line); margin-right:6px; white-space:nowrap; }
+  .pill.posted,.pill.done { color:var(--accent); border-color:var(--accent); } .pill.failed { color:var(--bad); border-color:var(--bad); }
+  .pill.posting,.pill.processing { color:var(--warn); border-color:var(--warn); }
+  .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
+  .acts a { font-size:13.5px; color:var(--accent); }
+  .err { color:var(--bad); font-size:13px; margin-top:6px; word-break:break-word; }
+  .bar { height:6px; background:var(--soft); border-radius:6px; overflow:hidden; margin-top:8px; } .bar i { display:block; height:100%; background:var(--accent); }
+  video { width:100%; max-width:260px; border-radius:8px; margin-top:8px; background:#000; }
+  .link { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; padding:12px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; }
+  .link .main { flex:1 1 320px; min-width:0; } .link .url { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .empty { color:var(--muted); padding:10px 2px; }
+  .chan { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+  .who { display:flex; gap:10px; align-items:center; min-width:0; } .who img { width:36px; height:36px; border-radius:50%; background:var(--soft); }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--muted); display:inline-block; margin-right:6px; } .dot.on { background:var(--accent); }
+  code { background:var(--soft); padding:1px 6px; border-radius:6px; font-size:12.5px; word-break:break-all; }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:10px 16px; border-radius:10px; display:none; max-width:90vw; z-index:5; }
+  @media (max-width:560px) { .item { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>Clip Engine</h1><p class="sub">Paste links, watch them become clips, see exactly when each one goes live. <span id="updated"></span></p></div>
+    <div class="row" style="margin:0">
+      <span id="who" class="sub"></span>
+      <input id="email" type="email" placeholder="Your email" style="width:200px;display:none" autocomplete="email">
+      <button class="ghost" id="signin" style="display:none">Email me a sign-in link</button>
+      <button class="ghost" id="signout" style="display:none">Sign out</button>
+      <input id="token" type="password" placeholder="Access key" style="width:170px" autocomplete="off">
+      <button class="ghost" id="refresh">Refresh</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="head"><h2>Channels</h2></div>
+    <div id="yt" class="chan"><span class="sub">Enter your access key to load your channels.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="head"><h2>Add links</h2></div>
+    <textarea id="links" placeholder="https://www.youtube.com/watch?v=...&#10;https://www.instagram.com/reel/..."></textarea>
+    <div class="row">
+      <span>Post to:</span>
+      <label><input type="checkbox" id="p-youtube" checked> YouTube</label>
+      <label><input type="checkbox" id="p-tiktok"> TikTok</label>
+      <select id="variations">
+        <option value="1">1 style: blurred backdrop</option>
+        <option value="2">2 styles: blurred backdrop + centre-crop</option>
+      </select>
+      <button id="go">Add and start</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <div class="head"><h2>Links</h2><span class="sub" id="linkNote"></span></div>
+    <div id="sources"><div class="empty">Enter your access key to load your links.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <h2>Schedule</h2>
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-f="upcoming">Upcoming</button>
+        <button class="tab" data-f="posted">Posted</button>
+        <button class="tab" data-f="failed">Failed</button>
+        <button class="tab" data-f="all">All</button>
+      </div>
+    </div>
+    <div class="sub" id="checkNote" style="margin-bottom:6px"></div>
+    <div id="clips"></div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const state = { q: null, offset: 0, filter: "upcoming" };
+const CHECK_MS = 30 * 60 * 1000; // the posting function runs every 30 minutes
+try { $("token").value = localStorage.getItem("clip-key") || ""; } catch (e) {}
+
+const now = () => Date.now() + state.offset;
+const pad2 = (n) => String(n).padStart(2, "0");
+const fmtTime = (ms) => new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function dayLabel(ms) {
+  const d = new Date(ms), t = new Date(now());
+  const key = (x) => x.getFullYear() * 400 + x.getMonth() * 32 + x.getDate();
+  const diff = key(d) - key(t);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  return d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+}
+function rel(ms) {
+  const s = Math.round((ms - now()) / 1000), a = Math.abs(s);
+  const h = Math.floor(a / 3600), m = Math.floor((a % 3600) / 60), sec = a % 60;
+  const txt = h ? h + "h " + pad2(m) + "m" : m ? m + "m " + pad2(sec) + "s" : sec + "s";
+  return s >= 0 ? "in " + txt : txt + " ago";
+}
+const nextCheck = (ms) => Math.ceil(ms / CHECK_MS) * CHECK_MS;
+const localInput = (ms) => { const d = new Date(ms); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
+const platformName = (p) => (p === "youtube" ? "YouTube" : "TikTok");
+const statusLabel = { ready: "Scheduled", posting: "Posting…", posted: "Posted", failed: "Failed" };
+
+function toast(text, bad) {
+  const t = $("toast");
+  t.textContent = text; t.style.display = "block"; t.style.background = bad ? "var(--bad)" : "var(--text)";
+  clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = "none"), 4500);
+}
+
+// ---------------------------------------------------------------- sign-in (Supabase Auth, email link)
+const auth = { cfg: { enabled: false }, session: null };
+try { auth.session = JSON.parse(localStorage.getItem("clip-session") || "null"); } catch (e) {}
+const saveSession = (x) => { auth.session = x; try { x ? localStorage.setItem("clip-session", JSON.stringify(x)) : localStorage.removeItem("clip-session"); } catch (e) {} };
+
+function sessionFromHash() {
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  if (!h.get("access_token")) return false;
+  saveSession({ access: h.get("access_token"), refresh: h.get("refresh_token"), exp: Date.now() + Number(h.get("expires_in") || 3600) * 1000 });
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  return true;
+}
+
+async function freshAccessToken() {
+  const s = auth.session;
+  if (!s) return null;
+  if (s.exp - 60000 > Date.now()) return s.access;
+  try {
+    const r = await fetch(auth.cfg.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST", headers: { apikey: auth.cfg.anonKey, "content-type": "application/json" }, body: JSON.stringify({ refresh_token: s.refresh }),
+    });
+    const j = await r.json();
+    if (!j.access_token) throw new Error("expired");
+    saveSession({ access: j.access_token, refresh: j.refresh_token || s.refresh, exp: Date.now() + (j.expires_in || 3600) * 1000 });
+    return j.access_token;
+  } catch (e) { saveSession(null); return null; }
+}
+
+function paintAuth() {
+  const on = auth.cfg.enabled, signedIn = !!auth.session;
+  $("email").style.display = on && !signedIn ? "" : "none";
+  $("signin").style.display = on && !signedIn ? "" : "none";
+  $("signout").style.display = signedIn ? "" : "none";
+  $("who").textContent = signedIn ? "Signed in" : "";
+  $("token").style.display = signedIn ? "none" : "";
+}
+
+async function initAuth() {
+  sessionFromHash();
+  try { auth.cfg = await (await fetch("/api/auth/config")).json(); } catch (e) { auth.cfg = { enabled: false }; }
+  if (!auth.cfg.enabled && auth.session) saveSession(null);
+  paintAuth();
+}
+
+async function authHeaders() {
+  const t = await freshAccessToken();
+  paintAuth();
+  return t ? { Authorization: "Bearer " + t } : { "x-cron-secret": $("token").value.trim() };
+}
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: { ...(await authHeaders()), "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "Request failed (" + r.status + ")");
+  return j;
+}
+
+// ---------------------------------------------------------------- rendering
+function tiles(q) {
+  const c = q.clips;
+  const sched = c.filter((x) => x.status === "ready" || x.status === "posting").sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+  const posted = c.filter((x) => x.status === "posted").length;
+  const failed = c.filter((x) => x.status === "failed").length;
+  const working = q.sources.filter((s) => s.status === "pending" || s.status === "processing").length;
+  const nxt = sched[0];
+  $("tiles").innerHTML =
+    '<div class="tile"><div class="l">Next post</div><div class="n">' + (nxt ? '<span class="cd" data-ts="' + new Date(nxt.scheduled_at).getTime() + '">' + rel(new Date(nxt.scheduled_at).getTime()) + "</span>" : "None") + "</div>" +
+    '<div class="l">' + (nxt ? platformName(nxt.platform) + " · " + esc(dayLabel(new Date(nxt.scheduled_at).getTime())) + " " + fmtTime(new Date(nxt.scheduled_at).getTime()) : "Nothing scheduled") + "</div></div>" +
+    '<div class="tile"><div class="n">' + sched.length + '</div><div class="l">Scheduled clips</div></div>' +
+    '<div class="tile"><div class="n">' + working + '</div><div class="l">Links in progress</div></div>' +
+    '<div class="tile"><div class="n">' + posted + '</div><div class="l">Posted (recent)</div></div>' +
+    '<div class="tile"><div class="n" style="color:' + (failed ? "var(--bad)" : "inherit") + '">' + failed + '</div><div class="l">Need attention</div></div>';
+}
+
+function sourceHtml(s) {
+  const total = s.planned || 0;
+  let stage, pct = 0;
+  if (s.status === "pending") {
+    const waitMin = (now() - new Date(s.created_at).getTime()) / 60000;
+    stage = waitMin > 10 ? "Waiting for the worker (it has not started yet; press Add and start or wait for its 3-hour check)" : "Waiting for the worker to start";
+  } else if (s.status === "processing") {
+    stage = total ? "Cutting clips " + (s.rendered || 0) + " of " + total : "Downloading and finding the best moments…";
+    pct = total ? Math.round(((s.rendered || 0) / total) * 100) : 8;
+  } else if (s.status === "done") {
+    stage = (s.rendered || 0) + " clip" + (s.rendered === 1 ? "" : "s") + " created"; pct = 100;
+  } else stage = "Failed";
+  const label = s.status === "pending" ? "Queued" : s.status === "processing" ? "Working" : s.status === "done" ? "Done" : "Failed";
+  return '<div class="link"><div class="main"><div class="title url" title="' + esc(s.url) + '">' + esc(s.title || s.url) + "</div>" +
+    '<div class="meta"><span class="pill ' + esc(s.status) + '">' + label + "</span>" + platformName(s.platform) + " · " + esc(stage) + "</div>" +
+    (s.status === "processing" || s.status === "done" ? '<div class="bar"><i style="width:' + pct + '%"></i></div>' : "") +
+    (s.error ? '<div class="err">' + esc(s.error) + "</div>" : "") + "</div>" +
+    (s.status === "failed" ? '<div><button class="ghost" data-act="retry-link" data-url="' + esc(s.url) + '" data-platform="' + esc(s.platform) + '">Retry</button></div>' : "") + "</div>";
+}
+
+function clipHtml(c) {
+  const t = new Date(c.posted_at || c.scheduled_at).getTime();
+  const due = c.status === "ready" && t <= now();
+  let when, sub;
+  if (c.status === "posted") { when = fmtTime(t); sub = rel(t); }
+  else if (due) { when = fmtTime(t); sub = "due, goes live at the next check (≤30 min)"; }
+  else { when = fmtTime(t); sub = '<span class="cd" data-ts="' + t + '">' + rel(t) + "</span>"; }
+  const goesLive = c.status === "ready" && !due ? '<div class="meta">Goes live around ' + fmtTime(nextCheck(t)) + " (checks run every 30 min)</div>" : "";
+  const link = c.status === "posted" && c.platform === "youtube" && c.platform_post_id
+    ? '<a href="https://www.youtube.com/watch?v=' + esc(c.platform_post_id) + '" target="_blank" rel="noopener">View on YouTube ↗</a>' : "";
+  const actions = [];
+  if (c.status === "ready" || c.status === "failed") {
+    actions.push('<button class="ghost" data-act="post-now" data-id="' + c.id + '">Post now</button>');
+    actions.push('<button class="ghost" data-act="resched" data-id="' + c.id + '">Reschedule</button>');
+    if (c.storage_url) actions.push('<button class="ghost" data-act="preview" data-id="' + c.id + '" data-src="' + esc(c.storage_url) + '">Preview</button>');
+    if (c.status === "failed") actions.push('<button class="ghost" data-act="retry" data-id="' + c.id + '">Retry</button>');
+    actions.push('<button class="ghost danger" data-act="cancel" data-id="' + c.id + '">Remove</button>');
+  }
+  return '<div class="item" id="clip-' + c.id + '"><div class="when"><b>' + when + "</b>" + sub + "</div><div>" +
+    '<div class="title">' + esc(c.title) + "</div>" +
+    '<div class="meta"><span class="pill ' + esc(c.status) + '">' + (due ? "Due" : statusLabel[c.status] || c.status) + "</span>" +
+    platformName(c.platform) + " · " + (c.variant === "fill" ? "centre-crop" : "blurred backdrop") + (c.headline ? ' · “' + esc(c.headline) + "”" : "") + "</div>" +
+    goesLive + (c.error ? '<div class="err">' + esc(c.error) + "</div>" : "") +
+    (actions.length || link ? '<div class="acts">' + actions.join("") + link + "</div>" : "") +
+    '<div id="slot-' + c.id + '"></div></div></div>';
+}
+
+function renderClips(q) {
+  const f = state.filter;
+  let list = q.clips.slice();
+  const t = (c) => new Date(c.posted_at || c.scheduled_at).getTime();
+  if (f === "upcoming") list = list.filter((c) => c.status === "ready" || c.status === "posting");
+  else if (f === "posted") list = list.filter((c) => c.status === "posted");
+  else if (f === "failed") list = list.filter((c) => c.status === "failed");
+  list.sort((a, b) => (f === "posted" ? t(b) - t(a) : t(a) - t(b)));
+  if (!list.length) { $("clips").innerHTML = '<div class="empty">' + (f === "upcoming" ? "No clips scheduled yet. Add a link above." : "Nothing here.") + "</div>"; return; }
+  let html = "", last = "";
+  for (const c of list) {
+    const d = dayLabel(t(c));
+    if (d !== last) { html += '<div class="day">' + esc(d) + "</div>"; last = d; }
+    html += clipHtml(c);
+  }
+  $("clips").innerHTML = html;
+}
+
+function render() {
+  const q = state.q;
+  if (!q) return;
+  tiles(q);
+  $("sources").innerHTML = q.sources.length ? q.sources.map(sourceHtml).join("") : '<div class="empty">No links yet.</div>';
+  $("linkNote").textContent = q.sources.length + " most recent";
+  renderClips(q);
+  const nc = nextCheck(now());
+  $("checkNote").textContent = "Posting checks run every 30 minutes. Next check at " + fmtTime(nc) + " (" + rel(nc) + "). Times are in your local time zone.";
+  $("updated").textContent = "Updated " + fmtTime(now()) + ".";
+}
+
+function tick() {
+  document.querySelectorAll(".cd").forEach((el) => { el.textContent = rel(Number(el.dataset.ts)); });
+}
+
+const canCall = () => !!auth.session || !!$("token").value.trim();
+
+async function load(quiet) {
+  if (!canCall()) return;
+  if (document.activeElement && document.activeElement.type === "datetime-local") return; // don't wipe an edit in progress
+  try {
+    const q = await api("/api/queue");
+    try { localStorage.setItem("clip-key", $("token").value.trim()); } catch (e) {}
+    state.q = q;
+    state.offset = new Date(q.now).getTime() - Date.now();
+    render();
+  } catch (e) {
+    if (!quiet) { $("sources").innerHTML = '<div class="err">' + esc(e.message) + "</div>"; }
+  }
+}
+
+// ---------------------------------------------------------------- YouTube sign-in
+function ytHtml(y) {
+  if (y.connected) {
+    const name = y.channelTitle ? esc(y.channelTitle) : "A YouTube channel (set up with a token in Netlify)";
+    return '<div class="who">' + (y.thumbnail ? '<img alt="" src="' + esc(y.thumbnail) + '">' : "") +
+      '<div><div class="title"><span class="dot on"></span>YouTube connected</div><div class="meta">' + name +
+      (y.connectedAt ? " · since " + new Date(y.connectedAt).toLocaleDateString() : "") + "</div></div></div>" +
+      '<div class="acts" style="margin:0"><button class="ghost" data-act="yt-connect">' + (y.source === "env" ? "Connect here instead" : "Switch channel") + "</button>" +
+      (y.source === "dashboard" ? '<button class="ghost danger" data-act="yt-disconnect">Disconnect</button>' : "") + "</div>";
+  }
+  if (!y.configured) {
+    return '<div><div class="title"><span class="dot"></span>YouTube not set up yet</div><div class="meta">Add <code>YT_CLIENT_ID</code> and <code>YT_CLIENT_SECRET</code> in Netlify, and register this redirect URI in Google Cloud: ' +
+      (y.redirectUri ? "<code>" + esc(y.redirectUri) + "</code>" : "<code>SITE_URL/api/auth/youtube/callback</code>") + "</div></div>";
+  }
+  return '<div><div class="title"><span class="dot"></span>YouTube not connected</div><div class="meta">Sign in with the Google account that owns your channel.</div></div>' +
+    '<div class="acts" style="margin:0"><button data-act="yt-connect">Connect YouTube</button></div>';
+}
+
+async function loadYouTube() {
+  if (!canCall()) return;
+  try { $("yt").innerHTML = ytHtml(await api("/api/auth/youtube/status")); }
+  catch (e) { $("yt").innerHTML = '<span class="err">' + esc(e.message) + "</span>"; }
+}
+
+async function connectYouTube() {
+  try { const r = await api("/api/auth/youtube/url", {}); window.location.href = r.url; }
+  catch (e) { toast(e.message, true); }
+}
+
+(function returnedFromGoogle() {
+  const p = new URLSearchParams(location.search), r = p.get("youtube");
+  if (!r) return;
+  setTimeout(() => toast(r === "connected" ? "YouTube connected. You can now schedule posts." : (p.get("msg") || "YouTube sign-in failed."), r !== "connected"), 400);
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+})();
+
+// ---------------------------------------------------------------- actions
+async function act(name, id, extra) {
+  try {
+    const r = await api("/api/clip", { id, action: name, ...extra });
+    toast(r.note || { "post-now": "Posting started. It should go live within a minute or two.", resched: "Rescheduled.", retry: "Queued for another try.", cancel: "Clip removed." }[name === "reschedule" ? "resched" : name] || "Done.");
+    await load(true);
+  } catch (e) { toast(e.message, true); }
+}
+
+document.addEventListener("click", async (ev) => {
+  const b = ev.target.closest("button");
+  if (!b) return;
+  if (b.classList.contains("tab")) {
+    state.filter = b.dataset.f;
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+    if (state.q) renderClips(state.q);
+    return;
+  }
+  const a = b.dataset.act, id = b.dataset.id;
+  if (a === "yt-connect") return connectYouTube();
+  if (a === "yt-disconnect") {
+    if (!confirm("Disconnect YouTube? Scheduled clips will stay queued but cannot post until you reconnect.")) return;
+    try { await api("/api/auth/youtube/disconnect", {}); toast("YouTube disconnected."); loadYouTube(); } catch (e) { toast(e.message, true); }
+    return;
+  }
+  if (a === "post-now") act("post-now", id);
+  else if (a === "retry") act("retry", id);
+  else if (a === "cancel") { if (confirm("Remove this clip and delete its file?")) act("cancel", id); }
+  else if (a === "preview") {
+    const slot = $("slot-" + id);
+    slot.innerHTML = slot.firstChild ? "" : '<video src="' + esc(b.dataset.src) + '" controls playsinline preload="metadata"></video>';
+  } else if (a === "resched") {
+    const slot = $("slot-" + id);
+    if (slot.firstChild) { slot.innerHTML = ""; return; }
+    slot.innerHTML = '<div class="acts"><input type="datetime-local" id="dt-' + id + '" value="' + localInput(now() + 3600000) + '"><button class="ghost" data-act="save-resched" data-id="' + id + '">Save</button></div>';
+  } else if (a === "save-resched") {
+    const v = $("dt-" + id).value;
+    if (!v) return toast("Pick a date and time.", true);
+    act("reschedule", id, { at: new Date(v).toISOString() });
+  } else if (a === "retry-link") {
+    try {
+      await api("/api/ingest", { links: b.dataset.url, platforms: [b.dataset.platform] });
+      toast("Retrying this link."); load(true);
+    } catch (e) { toast(e.message, true); }
+  }
+});
+
+$("go").onclick = async () => {
+  const platforms = ["youtube", "tiktok"].filter((p) => $("p-" + p).checked);
+  if (!platforms.length) { $("msg").className = "msg bad"; $("msg").textContent = "Choose at least one platform."; return; }
+  $("go").disabled = true; $("msg").className = "msg"; $("msg").textContent = "Saving…";
+  try {
+    const r = await api("/api/ingest", { links: $("links").value, platforms, variations: Number($("variations").value) });
+    $("msg").className = "msg ok";
+    $("msg").textContent = r.queued + " link(s) queued for " + r.platforms.map(platformName).join(" + ") + ". " + (r.workerStarted ? "Worker started." : (r.note || ""));
+    $("links").value = "";
+    load(true);
+  } catch (e) { $("msg").className = "msg bad"; $("msg").textContent = e.message; }
+  $("go").disabled = false;
+};
+$("refresh").onclick = () => { load(); loadYouTube(); };
+$("signin").onclick = async () => {
+  const email = $("email").value.trim();
+  if (!email) return toast("Enter your email first.", true);
+  try {
+    const r = await fetch(auth.cfg.supabaseUrl + "/auth/v1/otp?redirect_to=" + encodeURIComponent(location.origin + "/"), {
+      method: "POST", headers: { apikey: auth.cfg.anonKey, "content-type": "application/json" }, body: JSON.stringify({ email, create_user: true }),
+    });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).msg || "Could not send the link (" + r.status + ")");
+    toast("Check your email for the sign-in link.");
+  } catch (e) { toast(e.message, true); }
+};
+$("signout").onclick = () => { saveSession(null); paintAuth(); $("sources").innerHTML = '<div class="empty">Signed out.</div>'; $("clips").innerHTML = ""; $("tiles").innerHTML = ""; };
+initAuth().then(() => { load(); loadYouTube(); }); setInterval(() => load(true), 10000); setInterval(tick, 1000);
+</script>
+</body>
+</html>

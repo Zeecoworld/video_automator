@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # SITE_URL is just your public site address. Without this, Netlify treats it as a secret and fails the build
+  # whenever the address appears anywhere in the repo (tests, docs, examples).
+  SECRETS_SCAN_OMIT_KEYS = "SITE_URL"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Only the background function that renders needs ffmpeg and the bundled font.
+# ffmpeg-static stays external so its binary ships as-is (copied to /tmp and chmod'ed at runtime).
+[functions."fill-background"]
+  external_node_modules = ["ffmpeg-static"]
+  included_files = ["node_modules/ffmpeg-static/ffmpeg", "node_modules/ffmpeg-static/package.json", "node_modules/ffmpeg-static/index.js", "assets/*.ttf"]

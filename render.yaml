@@ -1,0 +1,34 @@
+# Render Blueprint: deploys the clip worker as a Background Worker built from ./Dockerfile.
+# Render -> New -> Blueprint -> pick this repo. Values marked `sync: false` are asked for in the dashboard.
+services:
+  - type: worker
+    name: clip-engine-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter   # a paid plan: Render's free tier has no background workers. Raise it if transcription runs out of memory.
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: WHISPER_MODEL
+        value: base          # tiny | base | small | medium. Use small only on a plan with 2 GB or more of memory.
+      - key: WORKER_MODE
+        value: local
+      - key: AI_PROVIDER
+        value: local
+      # Optional: a text model to choose the moments (otherwise the free rule-based picker is used).
+      # - key: LLM_BASE_URL
+      #   sync: false
+      # - key: LLM_MODEL
+      #   sync: false
+      # - key: LLM_API_KEY
+      #   sync: false
+      # Optional: residential proxy if YouTube/Instagram block Render's servers.
+      # - key: YTDLP_PROXY
+      #   sync: false
+      # Cookies: add a Secret File named cookies.txt in the service's Environment tab (read from /etc/secrets/cookies.txt),
+      # or set YTDLP_COOKIES_B64 as a variable.

@@ -1,0 +1,15 @@
+# Run the worker on your own PC/VPS:
+#   1. copy .env.worker.example to .env.worker and fill it in
+#   2. (optional) put a cookies.txt for YouTube/Instagram in ./secrets/
+#   3. docker compose -f docker-compose.worker.yml up -d --build
+#   Logs: docker compose -f docker-compose.worker.yml logs -f
+services:
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env.worker
+    volumes:
+      - whisper-cache:/root/.cache/huggingface   # the Whisper model downloads once, then stays here
+      - ./secrets:/secrets:ro
+volumes:
+  whisper-cache:
